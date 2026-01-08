@@ -19,6 +19,7 @@ export const HTML_TEMPLATE = /* html */ `
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LogVar弹幕API</title>
     <link rel="icon" type="image/jpg" href="https://i.mji.rip/2025/09/27/eedc7b701c0fa5c1f7c175b22f441ad9.jpeg">
+    <link rel="apple-touch-icon" href="https://i.mji.rip/2025/09/27/eedc7b701c0fa5c1f7c175b22f441ad9.jpeg">
     <style>${baseCssContent}</style>
     <style>${componentsCssContent}</style>
     <style>${formsCssContent}</style>
@@ -49,11 +50,11 @@ export const HTML_TEMPLATE = /* html */ `
                 </div>
             </div>
             <div class="nav-buttons">
-                <button class="nav-btn active" onclick="switchSection('preview')">配置预览</button>
-                <button class="nav-btn" onclick="switchSection('logs')">日志查看</button>
-                <button class="nav-btn" onclick="switchSection('api')">接口调试</button>
-                <button class="nav-btn" onclick="switchSection('push')">推送弹幕</button>
-                <button class="nav-btn" onclick="switchSection('env')" id="env-nav-btn">系统配置</button>
+                <button class="nav-btn active" onclick="switchSection('preview', event)">配置预览</button>
+                <button class="nav-btn" onclick="switchSection('logs', event)">日志查看</button>
+                <button class="nav-btn" onclick="switchSection('api', event)">接口调试</button>
+                <button class="nav-btn" onclick="switchSection('push', event)">推送弹幕</button>
+                <button class="nav-btn" onclick="switchSection('env', event)" id="env-nav-btn">系统配置</button>
             </div>
         </div>
 
@@ -61,6 +62,19 @@ export const HTML_TEMPLATE = /* html */ `
             <!-- 配置预览 -->
             <div class="section active" id="preview-section">
                 <h2>配置预览</h2>
+                
+                <div id="proxy-config-container" style="display: none; background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                    <h3 style="color: #856404; margin-top: 0; font-size: 16px;">⚠️ 获取配置失败</h3>
+                    <p style="color: #856404; margin-bottom: 10px; font-size: 14px;">
+                        检测到无法获取配置。如果您使用了复杂的反向代理：例如将 <code>http://{ip}:9321/</code> 代理到了 <code>http://{ip}:9321/danmu_api/</code>，请在此处手动输入完整的反代后链接（不包含TOKEN和ADMIN_TOKEN的）
+                    </p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <input type="text" id="custom-base-url" placeholder="例如: http://192.168.8.1:2333/danmu_api/ (留空保存即恢复默认)" style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <button class="btn btn-primary" onclick="saveBaseUrl()">保存并刷新</button>
+                    </div>
+                    <p style="color: #666; font-size: 12px; margin-top: 5px;">* 设置将保存在浏览器本地存储中，清除网页的‘本地存储空间’或者输入框中留空并保存可恢复默认</p>
+                </div>
+
                 <p style="color: #666; margin-bottom: 20px;">当前生效的环境变量配置</p>
                 <div class="preview-area" id="preview-area"></div>
             </div>
@@ -85,12 +99,13 @@ export const HTML_TEMPLATE = /* html */ `
                     <div class="form-group">
                         <label>选择接口</label>
                         <select id="api-select" onchange="loadApiParams()">
-                            <option value="">请选择接口</option>
+                            <option value="">-- 请选择接口 --</option>
                             <option value="searchAnime">搜索动漫 - /api/v2/search/anime</option>
                             <option value="searchEpisodes">搜索剧集 - /api/v2/search/episodes</option>
                             <option value="matchAnime">匹配动漫 - /api/v2/match</option>
                             <option value="getBangumi">获取番剧详情 - /api/v2/bangumi/:animeId</option>
                             <option value="getComment">获取弹幕 - /api/v2/comment/:commentId</option>
+                            <option value="getSegmentComment">获取分片弹幕 - /api/v2/segmentcomment</option>
                         </select>
                     </div>
                 </div>
@@ -199,12 +214,12 @@ export const HTML_TEMPLATE = /* html */ `
                 </div>
 
                 <div class="env-categories">
-                    <button class="category-btn active" onclick="switchCategory('api')">🔗 API配置</button>
-                    <button class="category-btn" onclick="switchCategory('source')">📜 源配置</button>
-                    <button class="category-btn" onclick="switchCategory('match')">🔍 匹配配置</button>
-                    <button class="category-btn" onclick="switchCategory('danmu')">🔣 弹幕配置</button>
-                    <button class="category-btn" onclick="switchCategory('cache')">💾 缓存配置</button>
-                    <button class="category-btn" onclick="switchCategory('system')">⚙️ 系统配置</button>
+                    <button class="category-btn active" onclick="switchCategory('api', event)">🔗 API配置</button>
+                    <button class="category-btn" onclick="switchCategory('source', event)">📜 源配置</button>
+                    <button class="category-btn" onclick="switchCategory('match', event)">🔍 匹配配置</button>
+                    <button class="category-btn" onclick="switchCategory('danmu', event)">🔣 弹幕配置</button>
+                    <button class="category-btn" onclick="switchCategory('cache', event)">💾 缓存配置</button>
+                    <button class="category-btn" onclick="switchCategory('system', event)">⚙️ 系统配置</button>
                 </div>
 
                 <div class="env-list" id="env-list"></div>
@@ -252,11 +267,12 @@ export const HTML_TEMPLATE = /* html */ `
                         <option value="number">数字 (1-100)</option>
                         <option value="select">单选</option>
                         <option value="multi-select">多选 (可排序)</option>
+                        <option value="map">映射</option>
                     </select>
                 </div>
                 <div class="form-group" id="value-input-container">
                     <!-- 动态渲染的值输入控件 -->
-                </div>
+                    </div>
                 <div class="form-group">
                     <label>描述</label>
                     <textarea id="env-description" placeholder="配置项说明" readonly></textarea>
